@@ -1,7 +1,5 @@
-'use strict';
-const {
-  Model
-} = require('sequelize');
+"use strict";
+const { Model } = require("sequelize");
 module.exports = (sequelize, DataTypes) => {
   class Employee extends Model {
     /**
@@ -11,19 +9,31 @@ module.exports = (sequelize, DataTypes) => {
      */
     static associate(models) {
       // define association here
+       Employee.hasOne(models.Allowance, {
+         // Or hasMany if one employee can have more than one allowance
+         foreignKey: "employee_tin",
+         as: "allowance", // This needs to match the as in your payroll controller
+       });
     }
   }
-  Employee.init({
-    Employee_TIN: DataTypes.STRING,
-    Employee_Name: DataTypes.STRING,
-    Basic_Salary: DataTypes.DECIMAL,
-    Food_Deduction: DataTypes.DECIMAL,
-    Penalty: DataTypes.DECIMAL,
-    Number_of_Working_Days: DataTypes.INTEGER,
-    Bank_Account: DataTypes.STRING
-  }, {
-    sequelize,
-    modelName: 'Employee',
-  });
+  Employee.init(
+    {
+      Employee_TIN: {
+        type: DataTypes.STRING,
+        primaryKey: true,
+        allowNull: false,
+      },
+      Employee_Name: DataTypes.STRING,
+      Basic_Salary: DataTypes.DECIMAL,
+      Food_Deduction: DataTypes.DECIMAL,
+      Penalty: DataTypes.DECIMAL,
+      Number_of_Working_Days: DataTypes.INTEGER,
+      Bank_Account: DataTypes.STRING,
+    },
+    {
+      sequelize,
+      modelName: "Employee",
+    }
+  );
   return Employee;
 };

@@ -3,6 +3,8 @@ const sequelize = require("./config/database");
 const Admin = require("./models/Admin");
 const authRoutes = require("./routes/authRoutes");
 const employeeRoutes = require("./routes/employeeRoutes");
+const payrollRoutes = require("./routes/payrollRoutes");
+
 const cors = require("cors");
 require("dotenv").config();
 
@@ -12,6 +14,7 @@ app.use(cors());
 
 app.use("/api/v1/auth", authRoutes);    
 app.use(employeeRoutes);
+app.use(payrollRoutes);
 
 // const corsOptions = {
 //   origin: "http://example.com",

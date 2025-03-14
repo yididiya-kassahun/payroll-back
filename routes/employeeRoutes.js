@@ -9,4 +9,9 @@ router.get("/api/v1/employees", employee.getEmployees);
 router.post("/api/v1/allowance", employee.addAllowance);
 router.get("/api/v1/allowance", employee.getAllowance);
 
+router.post("/api/v1/loan", employee.addLoan);
+router.get("/api/v1/loan", employee.getLoan);
+
+router.get("/api/v1/tax", employee.getTaxes);
+
 module.exports = router;

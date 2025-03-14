@@ -10,18 +10,32 @@ module.exports = (sequelize, DataTypes) => {
      * The `models/index` file will call this method automatically.
      */
     static associate(models) {
-      // define association here
+      Loan.belongsTo(models.Employee, {
+        foreignKey: "EmployeeTin",
+        as: "employee",
+      });
     }
   }
-  Loan.init({
-    EmployeeTin: DataTypes.STRING,
-    Loan_Amount: DataTypes.DECIMAL,
-    Loan_Deduction_Per_Month: DataTypes.DECIMAL,
-    Deduction_Start_Date: DataTypes.DATE,
-    Deduction_End_Date: DataTypes.DATE
-  }, {
-    sequelize,
-    modelName: 'Loan',
-  });
+  Loan.init(
+    {
+      EmployeeTin: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        primaryKey: true,
+        references: {
+          model: "Employees",
+          key: "EmployeeTin",
+        },
+      },
+      Loan_Amount: DataTypes.DECIMAL,
+      Loan_Deduction_Per_Month: DataTypes.DECIMAL,
+      Deduction_Start_Date: DataTypes.DATE,
+      Deduction_End_Date: DataTypes.DATE,
+    },
+    {
+      sequelize,
+      modelName: "Loan",
+    }
+  );
   return Loan;
 };

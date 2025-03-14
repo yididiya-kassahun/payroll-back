@@ -1,8 +1,9 @@
 const express = require("express");
-const payroll = require("../API/Payroll");
+const payroll = require("../API/payrollController");
 
 const router = express.Router();
 
-router.get("/payroll", payroll.getEmployeePayroll);
+router.post("/api/v1/payroll", payroll.processPayroll);
+router.get("/api/v1/payroll", payroll.fetchPayrolls);
 
 module.exports = router;
