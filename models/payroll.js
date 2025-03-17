@@ -1,7 +1,5 @@
-'use strict';
-const {
-  Model
-} = require('sequelize');
+"use strict";
+const { Model } = require("sequelize");
 module.exports = (sequelize, DataTypes) => {
   class Payroll extends Model {
     /**
@@ -11,10 +9,10 @@ module.exports = (sequelize, DataTypes) => {
      */
     static associate(models) {
       // define association here
-       Payroll.belongsTo(models.Employee, {
-         foreignKey: "employee_tin",
-         as: "employee", 
-       });
+      Payroll.belongsTo(models.Employee, {
+        foreignKey: "employee_tin",
+        as: "employee",
+      });
     }
   }
   Payroll.init(
@@ -23,10 +21,16 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.STRING,
         allowNull: false,
         primaryKey: true,
+        unique: true,
         references: {
           model: "Employees",
           key: "employee_tin",
         },
+      },
+      payroll_date: {
+        type: DataTypes.DATEONLY,
+        allowNull: false,
+        primaryKey: true,
       },
       gross_earning: DataTypes.DECIMAL,
       taxable_income: DataTypes.DECIMAL,
@@ -42,7 +46,14 @@ module.exports = (sequelize, DataTypes) => {
     {
       sequelize,
       modelName: "Payroll",
-      timestamps:true
+      tableName: "Payrolls",
+      timestamps: true,
+      uniqueKeys: {
+        // Define a unique key constraint
+        actions_unique: {
+          fields: ["employee_tin", "payroll_date"],
+        },
+      },
     }
   );
   return Payroll;

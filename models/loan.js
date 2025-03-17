@@ -29,8 +29,8 @@ module.exports = (sequelize, DataTypes) => {
       },
       Loan_Amount: DataTypes.DECIMAL,
       Loan_Deduction_Per_Month: DataTypes.DECIMAL,
-      Deduction_Start_Date: DataTypes.DATE,
-      Deduction_End_Date: DataTypes.DATE,
+      Deduction_Start_Date: DataTypes.DATEONLY,
+      Deduction_End_Date: DataTypes.DATEONLY,
     },
     {
       sequelize,
