@@ -1,5 +1,5 @@
 const { Op } = require("sequelize");
-const { Employee, Allowance, Loan, Tax} = require("../models");
+const { Employee, Allowance, Loan, Tax } = require("../models");
 
 exports.addEmployee = async (req, res, next) => {
   try {
@@ -68,27 +68,6 @@ exports.getEmployees = async (req, res, next) => {
   }
 };
 
-// exports.getAllowance = async (req, res, next) => {
-//   try {
-//     const allowances = await Allowance.findAll();
-
-//     if (!allowances || allowances.length === 0) {
-//       return res.status(404).json({ message: "No allowance found." });
-//     }
-
-//     res.status(200).json({
-//       message: "Allowances fetched successfully.",
-//       allowances: allowances,
-//     });
-//   } catch (error) {
-//     console.error("Error fetching allowances:", error);
-//     res.status(500).json({
-//       message: "Failed to fetch allowances.",
-//       error: error.message,
-//     });
-//   }
-// };
-
 exports.getAllowance = async (req, res, next) => {
   try {
     const allowances = await Allowance.findAll({
@@ -105,7 +84,6 @@ exports.getAllowance = async (req, res, next) => {
       return res.status(404).json({ message: "No allowance found." });
     }
 
-    // Optionally, format the data to include the employee name directly in the allowance object
     const formattedAllowances = allowances.map((allowance) => {
       const employeeName = allowance.employee
         ? allowance.employee.dataValues.Employee_Name
@@ -172,7 +150,6 @@ exports.addAllowance = async (req, res, next) => {
   } catch (error) {
     console.error("Error creating allowance:", error);
 
-    // Handle Sequelize validation errors
     if (error.name === "SequelizeValidationError") {
       const errors = error.errors.map((err) => err.message);
       return res.status(400).json({ errors: errors });
@@ -206,7 +183,6 @@ exports.addLoan = async (req, res, next) => {
         .json({ error: "Employee with that TIN does not exist" });
     }
 
-    // Convert DECIMAL values from strings to numbers
     const loanAmount = parseFloat(Loan_Amount);
     const monthlyDeduction = parseFloat(Loan_Deduction_Per_Month);
 
@@ -221,20 +197,16 @@ exports.addLoan = async (req, res, next) => {
         .json({ error: "Invalid loan amount or deduction per month" });
     }
 
-    // Calculate the number of months required to repay the loan
     const totalMonths = Math.ceil(loanAmount / monthlyDeduction);
 
-    // Convert Deduction_Start_Date to a Date object and add months
     let endDate = new Date(Deduction_Start_Date);
     if (isNaN(endDate.getTime())) {
       return res.status(400).json({ error: "Invalid Deduction Start Date" });
     }
     endDate.setMonth(endDate.getMonth() + totalMonths);
 
-    // Convert endDate to YYYY-MM-DD format
     const Deduction_End_Date = endDate.toISOString().split("T")[0];
 
-    // Create the loan record
     const newLoan = await Loan.create({
       EmployeeTin: tin_number,
       Loan_Amount: loanAmount,

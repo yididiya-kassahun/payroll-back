@@ -1,23 +1,23 @@
 const { Employee, Payroll } = require("../models");
-const Sequelize = require("sequelize"); // Import Sequelize
-const moment = require("moment"); // For date calculations
+const Sequelize = require("sequelize"); 
+const moment = require("moment"); 
 
 exports.reportStat = async (req, res, next) => {
   try {
     const totalEmployees = await Employee.count();
 
-    const startDate = moment().subtract(6, "months").startOf("month").toDate(); // 6 months ago
-    const endDate = moment().endOf("month").toDate(); // Today
+    const startDate = moment().subtract(6, "months").startOf("month").toDate(); 
+    const endDate = moment().endOf("month").toDate(); 
 
-    // Calculate start and end of the current month
+    // Calculating start and end of the current month
     const startOfMonth = moment().startOf("month").toDate();
     const endOfMonth = moment().endOf("month").toDate();
 
     const totalPayrollExpenses = await Payroll.sum("net_pay", {
       where: {
         payroll_date: {
-          [Sequelize.Op.gte]: startOfMonth, // Start of the month
-          [Sequelize.Op.lte]: endOfMonth, // End of the month
+          [Sequelize.Op.gte]: startOfMonth, 
+          [Sequelize.Op.lte]: endOfMonth, 
         },
       },
     });
@@ -42,12 +42,11 @@ exports.reportStat = async (req, res, next) => {
         [
           Sequelize.fn("date_trunc", "month", Sequelize.col("payroll_date")),
           "month",
-        ], // Group by month
+        ], 
         [Sequelize.fn("sum", Sequelize.col("net_pay")), "total_expenses"],
       ],
       include: [
         {
-          // add this to include the model in result
           model: Employee,
           as: "employee",
           attributes: [], 

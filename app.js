@@ -6,6 +6,8 @@ const employeeRoutes = require("./routes/employeeRoutes");
 const payrollRoutes = require("./routes/payrollRoutes");
 const reportRoutes = require("./routes/reportRoute");
 
+const authenticateJWT = require("./middleware/authMiddleware");
+
 const cors = require("cors");
 require("dotenv").config();
 

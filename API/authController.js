@@ -20,9 +20,8 @@ exports.signup = async (req, res) => {
   }
 
   try {
-    const hashedPassword = await bcrypt.hash(password, 10); 
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create a new admin
     const newUser = await Admin.create({
       username,
       email,
@@ -64,7 +63,6 @@ exports.signin = async (req, res) => {
   }
 
   try {
-    // Find the user by email
     const user = await Admin.findOne({ where: { email } });
 
     if (!user) {
@@ -74,7 +72,6 @@ exports.signin = async (req, res) => {
       });
     }
 
-    // Compare hashed password
     const isPasswordCorrect = await bcrypt.compare(password, user.password);
 
     if (!isPasswordCorrect) {
@@ -98,5 +95,36 @@ exports.signin = async (req, res) => {
       status: "error",
       message: "Something went wrong!",
     });
+  }
+};
+
+exports.changePassword = async (req, res, next) => {
+  try {
+    const { old_password, new_password } = req.body;
+    const { email } = req.user;
+
+    const admin = await Admin.findOne({ where: { email: email } });
+
+    if (!admin) {
+      return res.status(404).json({ message: "Admin not found" });
+    }
+
+    const passwordMatch = await bcrypt.compare(old_password, admin.password);
+
+    if (!passwordMatch) {
+      return res.status(400).json({ message: "Invalid old password" });
+    }
+
+    const hashedPassword = await bcrypt.hash(new_password, 10);
+
+    admin.password = hashedPassword;
+    await admin.save();
+
+    res.status(200).json({ message: "Password changed successfully" });
+  } catch (error) {
+    console.error("Error changing password:", error);
+    res
+      .status(500)
+      .json({ message: "Failed to change password", error: error });
   }
 };

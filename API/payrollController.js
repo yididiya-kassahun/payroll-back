@@ -12,8 +12,7 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// backend/controllers/payrollController.js
-const { Employee, Allowance, Tax, Payroll, Loan } = require("../models"); // Import your Sequelize models
+const { Employee, Allowance, Tax, Payroll, Loan } = require("../models"); 
 const {
   calculateTaxableIncome,
   calculateIncomeTax,
@@ -23,12 +22,12 @@ const {
 
 exports.processPayroll = async (req, res) => {
   try {
-    const { employee_tin } = req.query; // Or get the TIN from the request parameters, depending on your route
-    const payrollDate = new Date(); // Or get the payroll date from the request body
+    const { employee_tin } = req.body; 
+    const payrollDate = new Date(); 
 
     // 1. Fetch Employee Data
     const employee = await Employee.findByPk(employee_tin, {
-      include: [{ model: Allowance, as: "allowance" }], // Load the associated allowance data, *use the alias*
+      include: [{ model: Allowance, as: "allowance" }], 
     });
 
     console.log("employee allowance == ", employee);
@@ -37,13 +36,11 @@ exports.processPayroll = async (req, res) => {
       return res.status(404).json({ error: "Employee not found" });
     }
 
-    // check if there is Allowance object or not, if not create it.
     if (!employee.allowance) {
-      // await Allowance.create({ employee_tin: employee_tin });
       return res.status(404).json({ error: "Allowance not found" });
     }
 
-    const allowance = employee.allowance; // Access the allowance object, Use the alias
+    const allowance = employee.allowance;
 
     // 2. Calculate Gross Earnings
     let grossEarning = Number(employee.Basic_Salary);
@@ -67,14 +64,14 @@ exports.processPayroll = async (req, res) => {
 
     // 5. Calculate Pension Contributions
     const { employeePensionContribution, employerPensionContribution } =
-      calculatePensionContributions(Number(employee.Basic_Salary)); //Corrected field name
+      calculatePensionContributions(Number(employee.Basic_Salary)); 
 
     // 6. Calculate Loan Deduction
-    let loanDeduction = 0; // Default to no loan deduction
+    let loanDeduction = 0; 
 
     // Fetch loan information using the EmployeeTin foreign key from the Loan Model
     const loan = await Loan.findOne({
-      where: { EmployeeTin: employee_tin }, // Access loan data by foreign key
+      where: { EmployeeTin: employee_tin }, 
     });
 
     if (loan) {
@@ -83,27 +80,22 @@ exports.processPayroll = async (req, res) => {
       const deductionStartDate = new Date(loan.Deduction_Start_Date);
       const deductionEndDate = new Date(loan.Deduction_End_Date);
 
-      //Check if current date lies in between the start and end date
+      //Checking if current date lies in between the start and end date
       if (
         payrollDateFormatted >= deductionStartDate &&
         payrollDateFormatted <= deductionEndDate
       ) {
-        loanDeduction = Number(loan.Loan_Deduction_Per_Month || 0); // Use the loan amount from loan model
-        // Ensure the deduction does not exceed the remaining balance (Implementation of getRemainingLoanBalance function is required)
-        // const remainingBalance = await getRemainingLoanBalance(employee_tin);
-        // if (loanDeduction > remainingBalance) {
-        //   loanDeduction = remainingBalance; // Deduct only the remaining balance
-        // }
+        loanDeduction = Number(loan.Loan_Deduction_Per_Month || 0); 
       }
     }
 
     // 6. Calculate Total Deductions
     const totalDeductions =
-      Number(incomeTax) + // Ensure incomeTax is a number
-      Number(employeePensionContribution) + // Ensure employeePensionContribution is a number
-      Number(employee.Food_Deduction || 0) + //Corrected field name and conversion
-      Number(employee.Penalty || 0) + //Corrected field name and conversion
-      Number(loanDeduction);
+      Number(incomeTax) + 
+      Number(employeePensionContribution) +
+      Number(employee.Food_Deduction || 0) + 
+      Number(employee.Penalty || 0) + 
+      Number(loanDeduction || 0);
 
     // 7. Calculate Net Pay
     const netPay = calculateNetPay(grossEarning, totalDeductions);
@@ -111,21 +103,42 @@ exports.processPayroll = async (req, res) => {
     // 8. Create/Update Tax Record
     await Tax.upsert(
       {
-        // Use upsert to create or update
-        employee_tin: employee.Employee_TIN, //Corrected field name
+        employee_tin: employee.Employee_TIN, 
         taxable_income: taxableIncome,
         income_tax: incomeTax,
         employer_pension_contribution: employerPensionContribution,
         employee_pension_contribution: employeePensionContribution,
       },
-      {
-        where: { employee_tin: employee.Employee_TIN }, //Corrected field name
-      }
+      // {
+      //   where: { employee_tin: employee.Employee_TIN }, 
+      // }
     );
 
     // 9. Create Payroll Record
-    const payrollRecord = await Payroll.upsert(
-      {
+    const existingPayroll = await Payroll.findOne({
+      where: { employee_tin: employee.Employee_TIN },
+    });
+
+    if (existingPayroll) {
+      await existingPayroll.update({
+        payroll_date: payrollDate,
+        gross_earning: parseFloat(grossEarning.toFixed(3)),
+        taxable_income: parseFloat(taxableIncome.toFixed(3)),
+        income_tax: parseFloat(incomeTax.toFixed(3)),
+        employer_pension_contribution: parseFloat(
+          employerPensionContribution.toFixed(3)
+        ),
+        employee_pension_contribution: parseFloat(
+          employeePensionContribution.toFixed(3)
+        ),
+        loan_deductions: parseFloat(loanDeduction.toFixed(3)),
+        food_deduction: parseFloat(employee.Food_Deduction),
+        penalty_deductions: parseFloat(employee.Penalty),
+        net_pay: parseFloat(netPay.toFixed(3)),
+        bank_account: employee.Bank_Account,
+      });
+    } else {
+      await Payroll.create({
         employee_tin: employee.Employee_TIN,
         payroll_date: payrollDate,
         gross_earning: parseFloat(grossEarning.toFixed(3)),
@@ -142,15 +155,13 @@ exports.processPayroll = async (req, res) => {
         penalty_deductions: parseFloat(employee.Penalty),
         net_pay: parseFloat(netPay.toFixed(3)),
         bank_account: employee.Bank_Account,
-      },
-      {
-        where: { employee_tin: employee.Employee_TIN },
-      }
-    );
+      });
+    }
+
 
     res.status(200).json({
       message: "Payroll processed successfully",
-      payroll: payrollRecord,
+      // payroll: payrollRecord,
     });
   } catch (error) {
     console.error("Error processing payroll:", error);
@@ -205,7 +216,6 @@ exports.generatePayrollReport = async (req, res) => {
       order: [["employee_tin", "ASC"]],
     });
 
-    // Transform the data into a format suitable for the report
     const reportData = payrollData.map((payroll) => {
       const employee = payroll.employee;
       return {

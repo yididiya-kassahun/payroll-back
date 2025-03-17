@@ -24,7 +24,7 @@ module.exports = (sequelize, DataTypes) => {
       payroll_date: {
         type: DataTypes.DATEONLY,
         allowNull: false,
-       // primaryKey: true,
+        primaryKey: true,
       },
       gross_earning: DataTypes.DECIMAL,
       taxable_income: DataTypes.DECIMAL,
