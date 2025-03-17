@@ -9,6 +9,11 @@ module.exports = (sequelize, DataTypes) => {
      */
     static associate(models) {
       // define association here
+       Employee.hasMany(models.Payroll, {
+         foreignKey: "employee_tin",
+         as: "payrolls", // This needs to match the as in your payroll controller
+       });
+       
        Employee.hasOne(models.Allowance, {
          // Or hasMany if one employee can have more than one allowance
          foreignKey: "employee_tin",
@@ -23,6 +28,7 @@ module.exports = (sequelize, DataTypes) => {
         primaryKey: true,
         allowNull: false,
       },
+      Employee_Email: DataTypes.STRING,
       Employee_Name: DataTypes.STRING,
       Basic_Salary: DataTypes.DECIMAL,
       Food_Deduction: DataTypes.DECIMAL,

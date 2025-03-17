@@ -2,11 +2,6 @@
 const { Model } = require("sequelize");
 module.exports = (sequelize, DataTypes) => {
   class Payroll extends Model {
-    /**
-     * Helper method for defining associations.
-     * This method is not a part of Sequelize lifecycle.
-     * The `models/index` file will call this method automatically.
-     */
     static associate(models) {
       // define association here
       Payroll.belongsTo(models.Employee, {
@@ -20,7 +15,6 @@ module.exports = (sequelize, DataTypes) => {
       employee_tin: {
         type: DataTypes.STRING,
         allowNull: false,
-        primaryKey: true,
         unique: true,
         references: {
           model: "Employees",
@@ -30,7 +24,7 @@ module.exports = (sequelize, DataTypes) => {
       payroll_date: {
         type: DataTypes.DATEONLY,
         allowNull: false,
-        primaryKey: true,
+       // primaryKey: true,
       },
       gross_earning: DataTypes.DECIMAL,
       taxable_income: DataTypes.DECIMAL,

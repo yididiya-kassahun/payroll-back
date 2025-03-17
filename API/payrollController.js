@@ -1,3 +1,17 @@
+const nodemailer = require("nodemailer");
+const sendgridTransport = require("nodemailer-sendgrid-transport");
+
+// NodeMailer
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  port: 465,
+  secure: true,
+  auth: {
+    user: "yididiya.tech@gmail.com",
+    pass: "cxjx hwvz axuh uvqq",
+  },
+});
+
 // backend/controllers/payrollController.js
 const { Employee, Allowance, Tax, Payroll, Loan } = require("../models"); // Import your Sequelize models
 const {
@@ -173,7 +187,7 @@ exports.fetchPayrolls = async (req, res, next) => {
 
 exports.generatePayrollReport = async (req, res) => {
   try {
-    const { employee_tin } = req.query; // Get the employee_tin from the query parameters (if needed)
+    const { employee_tin } = req.query;
     console.log("employee_tin == ", employee_tin);
     const payrollData = await Payroll.findAll({
       include: [
@@ -185,10 +199,10 @@ exports.generatePayrollReport = async (req, res) => {
             "Employee_TIN",
             "Basic_Salary",
             "Bank_Account",
-          ], // Select employee details
+          ],
         },
       ],
-      order: [["employee_tin", "ASC"]], // Optional: Sort by employee TIN
+      order: [["employee_tin", "ASC"]],
     });
 
     // Transform the data into a format suitable for the report
@@ -212,7 +226,7 @@ exports.generatePayrollReport = async (req, res) => {
       };
     });
 
-    res.status(200).json(reportData); // Send the data as JSON
+    res.status(200).json(reportData);
   } catch (error) {
     console.error("Error generating payroll report:", error);
     res.status(500).json({
@@ -220,4 +234,52 @@ exports.generatePayrollReport = async (req, res) => {
       details: error.message,
     });
   }
+};
+
+exports.sendEmail = (req, res, next) => {
+  const { name, email } = req.body;
+
+  if (!name || !email) {
+    return res.status(400).json({ error: "Customer email is required" });
+  }
+
+  const mailOptions = {
+    from: "tinycoder2@gmail.com",
+    to: email,
+    subject: "Kerchanshe Employee Payroll Slip",
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px; background-color: #f9f9f9;">
+        <div style="text-align: center; padding-bottom: 10px;">
+          <h2 style="color: #007bff; margin: 0;">Kerchanshe Payroll Notification</h2>
+          <hr style="border: 0; height: 1px; background: #ddd; margin: 10px 0;">
+        </div>
+
+        <p style="color: #333; font-size: 16px;">Dear <strong>${name}</strong>,</p>
+
+        <p style="color: #555; font-size: 14px;">
+          We are pleased to inform you that your payroll slip is now available. Please find the details of your payroll slip in the attachment.
+        </p>
+
+        <div style="margin: 20px 0; padding: 15px; background: #e8f4fd; border-radius: 6px;">
+          <p style="margin: 0; font-size: 14px; color: #007bff;"><strong>🗓 Payroll Date:</strong> [Insert Date Here]</p>
+          <p style="margin: 0; font-size: 14px; color: #007bff;"><strong>💰 Net Pay:</strong> [Insert Amount Here]</p>
+        </div>
+
+        <p style="color: #555; font-size: 14px;">
+          If you have any questions, please reach out to the HR department.
+        </p>
+
+        <p style="font-size: 14px; color: #777;">Best Regards,</p>
+        <p style="font-size: 14px; color: #007bff;"><strong>HR & Payroll Team</strong></p>
+      </div>
+    `,
+  };
+
+  transporter.sendMail(mailOptions, (error, info) => {
+    if (error) {
+      console.error("Error sending email:", error);
+      return res.status(500).json({ error: "Email could not be sent" });
+    }
+    res.status(200).json({ message: "Email sent successfully", info });
+  });
 };
