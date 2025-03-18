@@ -1,5 +1,17 @@
 const nodemailer = require("nodemailer");
 const sendgridTransport = require("nodemailer-sendgrid-transport");
+const PDFMake = require("pdfmake");
+const fs = require("fs");
+
+// Define font files
+const fonts = {
+  Roboto: {
+    normal: "fonts/Roboto-Regular.ttf",
+    bold: "fonts/Roboto-Medium.ttf",
+    italics: "fonts/Roboto-Italic.ttf",
+    bolditalics: "fonts/Roboto-MediumItalic.ttf",
+  },
+};
 
 // NodeMailer
 const transporter = nodemailer.createTransport({
@@ -11,6 +23,8 @@ const transporter = nodemailer.createTransport({
     pass: "cxjx hwvz axuh uvqq",
   },
 });
+
+const printer = new PDFMake(fonts);
 
 const { Employee, Allowance, Tax, Payroll, Loan } = require("../models"); 
 const {
@@ -246,50 +260,147 @@ exports.generatePayrollReport = async (req, res) => {
   }
 };
 
-exports.sendEmail = (req, res, next) => {
-  const { name, email } = req.body;
+exports.sendEmail = async (req, res, next) => {
+  const { name, email, tinNumber } = req.body;
 
-  if (!name || !email) {
-    return res.status(400).json({ error: "Customer email is required" });
+  if (!name || !email || !tinNumber) {
+    return res
+      .status(400)
+      .json({ error: "Name, email, and employee TIN are required" });
   }
 
-  const mailOptions = {
-    from: "tinycoder2@gmail.com",
-    to: email,
-    subject: "Kerchanshe Employee Payroll Slip",
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px; background-color: #f9f9f9;">
-        <div style="text-align: center; padding-bottom: 10px;">
-          <h2 style="color: #007bff; margin: 0;">Kerchanshe Payroll Notification</h2>
-          <hr style="border: 0; height: 1px; background: #ddd; margin: 10px 0;">
-        </div>
+  try {
+    // 1. Fetch payroll data for the employee
+    const payroll = await Payroll.findOne({
+      where: { employee_tin: tinNumber },
+      include: [
+        {
+          model: Employee,
+          as: "employee", // Or whatever alias you use in your association
+        },
+      ],
+    });
 
-        <p style="color: #333; font-size: 16px;">Dear <strong>${name}</strong>,</p>
-
-        <p style="color: #555; font-size: 14px;">
-          We are pleased to inform you that your payroll slip is now available. Please find the details of your payroll slip in the attachment.
-        </p>
-
-        <div style="margin: 20px 0; padding: 15px; background: #e8f4fd; border-radius: 6px;">
-          <p style="margin: 0; font-size: 14px; color: #007bff;"><strong>🗓 Payroll Date:</strong> [Insert Date Here]</p>
-          <p style="margin: 0; font-size: 14px; color: #007bff;"><strong>💰 Net Pay:</strong> [Insert Amount Here]</p>
-        </div>
-
-        <p style="color: #555; font-size: 14px;">
-          If you have any questions, please reach out to the HR department.
-        </p>
-
-        <p style="font-size: 14px; color: #777;">Best Regards,</p>
-        <p style="font-size: 14px; color: #007bff;"><strong>HR & Payroll Team</strong></p>
-      </div>
-    `,
-  };
-
-  transporter.sendMail(mailOptions, (error, info) => {
-    if (error) {
-      console.error("Error sending email:", error);
-      return res.status(500).json({ error: "Email could not be sent" });
+    if (!payroll) {
+      return res
+        .status(404)
+        .json({ error: "Payroll data not found for this employee" });
     }
-    res.status(200).json({ message: "Email sent successfully", info });
-  });
+
+    // 2. Generate the PDF document definition
+    const docDefinition = {
+      content: [
+        { text: "Kerchanshe Payroll Slip", style: "header" },
+        {
+          text: `Employee Name: ${payroll.employee.Employee_Name}`,
+          style: "info",
+        },
+        { text: `Employee TIN: ${payroll.employee_tin}`, style: "info" },
+        { text: `Payroll Date: ${payroll.payroll_date}`, style: "info" },
+        { text: `Gross Earning: ${payroll.gross_earning}`, style: "info" },
+        { text: `Taxable Income: ${payroll.taxable_income}`, style: "info" },
+        { text: `Income Tax: ${payroll.income_tax}`, style: "info" },
+        {
+          text: `Employee Pension Contribution: ${payroll.employee_pension_contribution}`,
+          style: "info",
+        },
+        {
+          text: `Employer Pension Contribution: ${payroll.employer_pension_contribution}`,
+          style: "info",
+        },
+        { text: `Loan Deductions: ${payroll.loan_deductions}`, style: "info" },
+        { text: `Food Deduction: ${payroll.food_deduction}`, style: "info" },
+        {
+          text: `Penalty Deductions: ${payroll.penalty_deductions}`,
+          style: "info",
+        },
+        { text: `Net Pay: ${payroll.net_pay}`, style: "netPay" },
+      ],
+      styles: {
+        header: {
+          fontSize: 22,
+          bold: true,
+          alignment: "center",
+          marginBot: 20,
+        },
+        info: {
+          fontSize: 14,
+          marginBot: 8,
+        },
+        netPay: {
+          fontSize: 16,
+          bold: true,
+          marginTop: 20,
+          alignment: "right",
+        },
+      },
+    };
+
+    // 3. Generate the PDF as a buffer
+    const pdfDoc = printer.createPdfKitDocument(docDefinition, {});
+    const pdfChunks = [];
+
+    pdfDoc.on("data", (chunk) => {
+      pdfChunks.push(chunk);
+    });
+
+    pdfDoc.on("end", async () => {
+      const pdfBuffer = Buffer.concat(pdfChunks);
+
+      // 4. Configure Nodemailer email options with attachment
+      const mailOptions = {
+        from: "tinycoder2@gmail.com",
+        to: email,
+        subject: "Kerchanshe Employee Payroll Slip",
+        html: `
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px; background-color: #f9f9f9;">
+                        <div style="text-align: center; padding-bottom: 10px;">
+                            <h2 style="color: #007bff; margin: 0;">Kerchanshe Payroll Notification</h2>
+                            <hr style="border: 0; height: 1px; background: #ddd; margin: 10px 0;">
+                        </div>
+                        <p style="color: #333; font-size: 16px;">Dear <strong>${name}</strong>,</p>
+                        <p style="color: #555; font-size: 14px;">
+                            We are pleased to inform you that your payroll slip is now available. Please find the details of your payroll slip in the attachment.
+                        </p>
+                        <p style="color: #555; font-size: 14px;">
+                            If you have any questions, please reach out to the HR department.
+                        </p>
+                        <p style="font-size: 14px; color: #777;">Best Regards,</p>
+                        <p style="font-size: 14px; color: #007bff;"><strong>HR & Payroll Team</strong></p>
+                    </div>
+                `,
+        attachments: [
+          {
+            filename: "payroll_slip.pdf",
+            content: pdfBuffer,
+            contentType: "application/pdf",
+          },
+        ],
+      };
+
+      // 5. Send the email
+      transporter.sendMail(mailOptions, (error, info) => {
+        if (error) {
+          console.error("Error sending email:", error);
+          return res
+            .status(500)
+            .json({ error: "Email could not be sent", details: error.message });
+        }
+        res.status(200).json({ message: "Email sent successfully", info });
+      });
+    });
+
+    pdfDoc.on("error", (err) => {
+      console.error("Error generating PDF:", err);
+      return res
+        .status(500)
+        .json({ error: "Failed to generate PDF", details: err.message });
+    });
+    pdfDoc.end();
+  } catch (error) {
+    console.error("Error generating payroll slip:", error);
+    res
+      .status(500)
+      .json({ error: "Failed to send payroll slip", details: error.message });
+  }
 };

@@ -5,8 +5,7 @@ const authRoutes = require("./routes/authRoutes");
 const employeeRoutes = require("./routes/employeeRoutes");
 const payrollRoutes = require("./routes/payrollRoutes");
 const reportRoutes = require("./routes/reportRoute");
-
-const authenticateJWT = require("./middleware/authMiddleware");
+const setupSwagger = require("./config/swaggerConfig");
 
 const cors = require("cors");
 require("dotenv").config();
@@ -16,9 +15,9 @@ app.use(express.json());
 app.use(cors());
 
 app.use("/api/v1/auth", authRoutes);    
-app.use(employeeRoutes);
-app.use(payrollRoutes);
-app.use(reportRoutes);
+app.use("/api/v1",employeeRoutes);
+app.use("/api/v1", payrollRoutes);
+app.use("/api/v1", reportRoutes);
 
 // const corsOptions = {
 //   origin: "http://example.com",
@@ -26,6 +25,8 @@ app.use(reportRoutes);
 //   allowedHeaders: ["Content-Type", "Authorization"],
 // };
 // app.use(cors(corsOptions));
+
+setupSwagger(app);
 
 // Handle unmatched routes
 app.use((req, res, next) => {
@@ -36,7 +37,7 @@ app.use((req, res, next) => {
 
 const PORT = 4000; // process.env.PORT
 
-// Test database connection and sync the database
+// connection and sync
 sequelize
   .authenticate()
   .then(() => {

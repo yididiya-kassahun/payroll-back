@@ -1,5 +1,5 @@
 const { Op } = require("sequelize");
-const { Employee, Allowance, Loan, Tax } = require("../models");
+const { Employee, Allowance, Loan, Tax, sequelize } = require("../models");
 
 exports.addEmployee = async (req, res, next) => {
   try {
@@ -65,6 +65,90 @@ exports.getEmployees = async (req, res, next) => {
       message: "Failed to fetch employees.",
       error: error.message,
     });
+  }
+};
+
+exports.updateEmployee = async (req, res, next) => {
+  // const { employeeData } = req.body; 
+  console.log("req body ", req.body);
+
+  try {
+    const employee = await Employee.findOne({
+      where: { Employee_TIN: req.body.Employee_TIN },
+    });
+
+    if (employee) {
+      await employee.update({
+        Employee_Name: req.body.Employee_Name, 
+        Basic_Salary: req.body.Basic_Salary, 
+        Food_Deduction: req.body.Food_Deduction, 
+        Penalty: req.body.Penalty, 
+        Number_of_Working_Days: req.body.Number_of_Working_Days, 
+        Bank_Account: req.body.Bank_Account, 
+      });
+
+      res.status(200).json({
+        message: "Employee updated successfully",
+      });
+    } else {
+      console.log("Employee not found");
+      return res.status(404).json({ message: "Employee not found" }); 
+    }
+  } catch (error) {
+    console.error("Error updating employee:", error);
+    res.status(500).json({
+      message: "Error updating employee",
+      error: error.message,
+    });
+  }
+};
+
+exports.deleteEmployee = async (req, res, next) => {
+  const { tin } = req.params;
+
+  try {
+    const employee = await Employee.findByPk(tin);
+
+    if (!employee) {
+      return res.status(404).json({ error: "Employee not found" });
+    }
+
+    await sequelize.transaction(async (t) => {
+      try {
+        await Tax.destroy({
+          where: { employee_tin: tin },
+          transaction: t,
+        });
+
+        // Delete the loan record
+        await Loan.destroy({
+          where: { EmployeeTin: tin },
+          transaction: t,
+        });
+
+        // Delete the allowance record
+        await Allowance.destroy({
+          where: { employee_tin: tin },
+          transaction: t,
+        });
+
+        // Finally, delete the employee record
+        await Employee.destroy({
+          where: { Employee_TIN: tin },
+          transaction: t,
+        });
+      } catch (error) {
+        console.error("Error deleting employee record:", error);
+        throw error; // Rollback transaction on error
+      }
+    });
+
+    res.status(200).json({ message: "Employee deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting employee:", error);
+    res
+      .status(500)
+      .json({ error: "Failed to delete employee", details: error.message });
   }
 };
 
