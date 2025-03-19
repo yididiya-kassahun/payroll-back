@@ -33,6 +33,7 @@ const {
   calculatePensionContributions,
   calculateNetPay,
 } = require("../utils/payrollCalculations");
+const { where } = require("sequelize");
 
 exports.processPayroll = async (req, res) => {
   try {
@@ -213,7 +214,7 @@ exports.fetchPayrolls = async (req, res, next) => {
 exports.generatePayrollReport = async (req, res) => {
   try {
     const { employee_tin } = req.query;
-    console.log("employee_tin == ", employee_tin);
+  //  console.log("employee_tin == ", employee_tin);
     const payrollData = await Payroll.findAll({
       include: [
         {
@@ -227,16 +228,18 @@ exports.generatePayrollReport = async (req, res) => {
           ],
         },
       ],
+      where: [{ employee_tin: employee_tin }],
       order: [["employee_tin", "ASC"]],
     });
 
     const reportData = payrollData.map((payroll) => {
       const employee = payroll.employee;
+      console.log("employee ",employee);
       return {
-        employee_name: employee.employee_name,
-        employee_tin: employee.employee_tin,
-        basic_salary: employee.basic_salary,
-        bank_account: employee.bank_account,
+        employee_name: payroll.employee.Employee_Name,
+        employee_tin: payroll.employee.Employee_TIN,
+        basic_salary: payroll.employee.Basic_Salary,
+        bank_account: payroll.employee.Bank_Account,
         payroll_date: payroll.payroll_date,
         gross_earning: payroll.gross_earning,
         taxable_income: payroll.taxable_income,

@@ -69,7 +69,7 @@ exports.getEmployees = async (req, res, next) => {
 };
 
 exports.updateEmployee = async (req, res, next) => {
-  // const { employeeData } = req.body; 
+  // const { employeeData } = req.body;
   console.log("req body ", req.body);
 
   try {
@@ -79,12 +79,12 @@ exports.updateEmployee = async (req, res, next) => {
 
     if (employee) {
       await employee.update({
-        Employee_Name: req.body.Employee_Name, 
-        Basic_Salary: req.body.Basic_Salary, 
-        Food_Deduction: req.body.Food_Deduction, 
-        Penalty: req.body.Penalty, 
-        Number_of_Working_Days: req.body.Number_of_Working_Days, 
-        Bank_Account: req.body.Bank_Account, 
+        Employee_Name: req.body.Employee_Name,
+        Basic_Salary: req.body.Basic_Salary,
+        Food_Deduction: req.body.Food_Deduction,
+        Penalty: req.body.Penalty,
+        Number_of_Working_Days: req.body.Number_of_Working_Days,
+        Bank_Account: req.body.Bank_Account,
       });
 
       res.status(200).json({
@@ -92,7 +92,7 @@ exports.updateEmployee = async (req, res, next) => {
       });
     } else {
       console.log("Employee not found");
-      return res.status(404).json({ message: "Employee not found" }); 
+      return res.status(404).json({ message: "Employee not found" });
     }
   } catch (error) {
     console.error("Error updating employee:", error);
@@ -241,6 +241,57 @@ exports.addAllowance = async (req, res, next) => {
     res
       .status(500)
       .json({ error: "Failed to create allowance", details: error.message });
+  }
+};
+
+exports.updateAllowance = async (req, res, next) => {
+  const { employeeData } = req.body;
+  console.log("req body ", employeeData);
+
+  try {
+    const allowance = await Allowance.findOne({
+      where: { employee_tin: req.body.employee_tin },
+    });
+
+    if (allowance) {
+      await allowance.update({
+        non_taxable_allowance: req.body.non_taxable_allowance,
+        taxable_allowance: req.body.taxable_allowance,
+        overtime_hours: req.body.overtime_hours,
+        sales_commission_allowance: req.body.sales_commission_allowance,
+        night_working_hours: req.body.night_working_hours,
+        sunday_working_hours: req.body.sunday_working_hours,
+        holiday_working_hours: req.body.holiday_working_hours,
+      });
+
+      res.status(200).json({
+        message: "allowance updated successfully",
+      });
+    } else {
+      console.log("allowance not found");
+      return res.status(404).json({ message: "allowance not found" });
+    }
+  } catch (error) {
+    console.error("Error updating allowance:", error);
+    res.status(500).json({
+      message: "Error updating allowance",
+      error: error.message,
+    });
+  }
+};
+
+exports.deleteAllowance = async (req, res) => {
+  try {
+    const deleted = await Allowance.destroy({
+      where: { employee_tin: req.params.employee_tin },
+    });
+    if (!deleted)
+      return res.status(404).json({ message: "Allowance not found" });
+    res.json({ message: "Allowance deleted successfully" });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Error deleting allowance", error: error.message });
   }
 };
 

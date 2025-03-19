@@ -135,6 +135,13 @@ router.post("/allowance", authenticateJWT, employee.addAllowance);
  */
 router.get("/allowance", authenticateJWT, employee.getAllowance);
 
+router.put("/allowance", authenticateJWT, employee.updateAllowance);
+
+router.post(
+  "/deleteAllowance/:employee_tin",
+  authenticateJWT,
+  employee.deleteAllowance
+);
 /**
  * @swagger
  * /api/v1/employees/loan:
