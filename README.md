@@ -88,7 +88,7 @@ Before you begin, ensure you have the following installed:
 
 2.  **Access the API:**
 
-    The API will be accessible at `http://localhost:5000` (or the port you configured in your environment).
+    The API will be accessible at `http://localhost:4000/api-docs`
 
 ## API Endpoints
 
