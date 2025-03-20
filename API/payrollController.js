@@ -3,7 +3,7 @@ const sendgridTransport = require("nodemailer-sendgrid-transport");
 const PDFMake = require("pdfmake");
 const fs = require("fs");
 
-// Define font files
+// font files
 const fonts = {
   Roboto: {
     normal: "fonts/Roboto-Regular.ttf",
@@ -26,7 +26,7 @@ const transporter = nodemailer.createTransport({
 
 const printer = new PDFMake(fonts);
 
-const { Employee, Allowance, Tax, Payroll, Loan } = require("../models"); 
+const { Employee, Allowance, Tax, Payroll, Loan } = require("../models");
 const {
   calculateTaxableIncome,
   calculateIncomeTax,
@@ -37,12 +37,12 @@ const { where } = require("sequelize");
 
 exports.processPayroll = async (req, res) => {
   try {
-    const { employee_tin } = req.body; 
-    const payrollDate = new Date(); 
+    const { employee_tin } = req.body;
+    const payrollDate = new Date();
 
     // 1. Fetch Employee Data
     const employee = await Employee.findByPk(employee_tin, {
-      include: [{ model: Allowance, as: "allowance" }], 
+      include: [{ model: Allowance, as: "allowance" }],
     });
 
     console.log("employee allowance == ", employee);
@@ -57,7 +57,7 @@ exports.processPayroll = async (req, res) => {
 
     const allowance = employee.allowance;
 
-    // 2. Calculate Gross Earnings
+    // Calculate Gross Earnings
     let grossEarning = Number(employee.Basic_Salary);
 
     grossEarning += Number(allowance.taxable_allowance || 0);
@@ -68,68 +68,66 @@ exports.processPayroll = async (req, res) => {
     grossEarning += Number(allowance.sunday_working_hours || 0);
     grossEarning += Number(allowance.holiday_working_hours || 0);
 
-    // 3. Calculate Taxable Income
+    // Calculate Taxable Income
     const taxableIncome = calculateTaxableIncome(
       grossEarning,
       allowance.non_taxable_allowance || 0
     );
 
-    // 4. Calculate Income Tax (Using Ethiopian Tax Brackets)
+    // Calculate Income Tax
     const incomeTax = calculateIncomeTax(taxableIncome);
 
-    // 5. Calculate Pension Contributions
+    // Calculate Pension Contributions
     const { employeePensionContribution, employerPensionContribution } =
-      calculatePensionContributions(Number(employee.Basic_Salary)); 
+      calculatePensionContributions(Number(employee.Basic_Salary));
 
-    // 6. Calculate Loan Deduction
-    let loanDeduction = 0; 
+    // Calculate Loan Deduction
+    let loanDeduction = 0;
 
-    // Fetch loan information using the EmployeeTin foreign key from the Loan Model
     const loan = await Loan.findOne({
-      where: { EmployeeTin: employee_tin }, 
+      where: { EmployeeTin: employee_tin },
     });
 
     if (loan) {
-      // Only proceed if a loan exists
       const payrollDateFormatted = new Date(payrollDate);
       const deductionStartDate = new Date(loan.Deduction_Start_Date);
       const deductionEndDate = new Date(loan.Deduction_End_Date);
 
-      //Checking if current date lies in between the start and end date
+      // Checking if current date lies in between the start and end date
       if (
         payrollDateFormatted >= deductionStartDate &&
         payrollDateFormatted <= deductionEndDate
       ) {
-        loanDeduction = Number(loan.Loan_Deduction_Per_Month || 0); 
+        loanDeduction = Number(loan.Loan_Deduction_Per_Month || 0);
       }
     }
 
-    // 6. Calculate Total Deductions
+    // Calculate Total Deductions
     const totalDeductions =
-      Number(incomeTax) + 
+      Number(incomeTax) +
       Number(employeePensionContribution) +
-      Number(employee.Food_Deduction || 0) + 
-      Number(employee.Penalty || 0) + 
+      Number(employee.Food_Deduction || 0) +
+      Number(employee.Penalty || 0) +
       Number(loanDeduction || 0);
 
-    // 7. Calculate Net Pay
+    // Calculate Net Pay
     const netPay = calculateNetPay(grossEarning, totalDeductions);
 
-    // 8. Create/Update Tax Record
+    // Create/Update Tax Record
     await Tax.upsert(
       {
-        employee_tin: employee.Employee_TIN, 
+        employee_tin: employee.Employee_TIN,
         taxable_income: taxableIncome,
         income_tax: incomeTax,
         employer_pension_contribution: employerPensionContribution,
         employee_pension_contribution: employeePensionContribution,
-      },
+      }
       // {
-      //   where: { employee_tin: employee.Employee_TIN }, 
+      //   where: { employee_tin: employee.Employee_TIN },
       // }
     );
 
-    // 9. Create Payroll Record
+    // Create Payroll Record
     const existingPayroll = await Payroll.findOne({
       where: { employee_tin: employee.Employee_TIN },
     });
@@ -173,10 +171,8 @@ exports.processPayroll = async (req, res) => {
       });
     }
 
-
     res.status(200).json({
       message: "Payroll processed successfully",
-      // payroll: payrollRecord,
     });
   } catch (error) {
     console.error("Error processing payroll:", error);
@@ -214,7 +210,6 @@ exports.fetchPayrolls = async (req, res, next) => {
 exports.generatePayrollReport = async (req, res) => {
   try {
     const { employee_tin } = req.query;
-  //  console.log("employee_tin == ", employee_tin);
     const payrollData = await Payroll.findAll({
       include: [
         {
@@ -234,7 +229,7 @@ exports.generatePayrollReport = async (req, res) => {
 
     const reportData = payrollData.map((payroll) => {
       const employee = payroll.employee;
-      console.log("employee ",employee);
+      console.log("employee ", employee);
       return {
         employee_name: payroll.employee.Employee_Name,
         employee_tin: payroll.employee.Employee_TIN,
@@ -273,13 +268,12 @@ exports.sendEmail = async (req, res, next) => {
   }
 
   try {
-    // 1. Fetch payroll data for the employee
     const payroll = await Payroll.findOne({
       where: { employee_tin: tinNumber },
       include: [
         {
           model: Employee,
-          as: "employee", // Or whatever alias you use in your association
+          as: "employee",
         },
       ],
     });
@@ -290,7 +284,7 @@ exports.sendEmail = async (req, res, next) => {
         .json({ error: "Payroll data not found for this employee" });
     }
 
-    // 2. Generate the PDF document definition
+    // Generating the PDF document definition
     const docDefinition = {
       content: [
         { text: "Kerchanshe Payroll Slip", style: "header" },
@@ -339,7 +333,7 @@ exports.sendEmail = async (req, res, next) => {
       },
     };
 
-    // 3. Generate the PDF as a buffer
+    // Generate the PDF as a buffer
     const pdfDoc = printer.createPdfKitDocument(docDefinition, {});
     const pdfChunks = [];
 
@@ -350,7 +344,6 @@ exports.sendEmail = async (req, res, next) => {
     pdfDoc.on("end", async () => {
       const pdfBuffer = Buffer.concat(pdfChunks);
 
-      // 4. Configure Nodemailer email options with attachment
       const mailOptions = {
         from: "tinycoder2@gmail.com",
         to: email,
@@ -381,7 +374,7 @@ exports.sendEmail = async (req, res, next) => {
         ],
       };
 
-      // 5. Send the email
+      // Send the email
       transporter.sendMail(mailOptions, (error, info) => {
         if (error) {
           console.error("Error sending email:", error);

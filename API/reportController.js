@@ -23,7 +23,6 @@ exports.reportStat = async (req, res, next) => {
     });
 
     const totalDeductions = await Payroll.sum("income_tax", {
-      // Sum of all deduction components, this is just sample
       where: {
         payroll_date: {
           [Sequelize.Op.gte]: startOfMonth,

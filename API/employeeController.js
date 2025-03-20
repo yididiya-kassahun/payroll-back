@@ -132,14 +132,14 @@ exports.deleteEmployee = async (req, res, next) => {
           transaction: t,
         });
 
-        // Finally, delete the employee record
+        // delete the employee record
         await Employee.destroy({
           where: { Employee_TIN: tin },
           transaction: t,
         });
       } catch (error) {
         console.error("Error deleting employee record:", error);
-        throw error; // Rollback transaction on error
+        throw error; 
       }
     });
 
