@@ -37,8 +37,10 @@ const { where } = require("sequelize");
 
 exports.processPayroll = async (req, res) => {
   try {
-    const { employee_tin } = req.body;
+    const { employee_tin } = req.query;
     const payrollDate = new Date();
+
+    console.log("employee_tin  == ", employee_tin);
 
     // 1. Fetch Employee Data
     const employee = await Employee.findByPk(employee_tin, {
@@ -106,9 +108,9 @@ exports.processPayroll = async (req, res) => {
     const totalDeductions =
       Number(incomeTax) +
       Number(employeePensionContribution) +
-      Number(employee.Food_Deduction || 0) +
-      Number(employee.Penalty || 0) +
-      Number(loanDeduction || 0);
+      Number(employee.Food_Deduction) +
+      Number(employee.Penalty) +
+      Number(loanDeduction);
 
     // Calculate Net Pay
     const netPay = calculateNetPay(grossEarning, totalDeductions);
