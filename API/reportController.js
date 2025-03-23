@@ -1,4 +1,4 @@
-const { Employee, Payroll } = require("../models");
+const { Employee, Payroll, OvertimeRate } = require("../models");
 const Sequelize = require("sequelize"); 
 const moment = require("moment"); 
 
@@ -99,3 +99,48 @@ exports.reportStat = async (req, res, next) => {
       .json({ error: "Failed to fetch report stats", details: error.message });
   }
 };
+
+exports.fetchRates = (req,res,next) => {
+  OvertimeRate.findAll()
+    .then((rates) => {
+      res.status(200).json({
+        status: "success",
+        data: rates,
+      });
+    })
+    .catch((err) => {
+      console.error("Error fetching overtime rates:", err);
+      res.status(500).json({
+        status: "error",
+        message: "Failed to fetch overtime rates",
+      });
+    });
+}
+
+exports.updateRates = (req,res,next) => {
+  const { Rate_Name, Overtime_Rate } = req.body;
+
+  if (!Rate_Name || !Overtime_Rate) {
+    return res.status(400).json({
+      status: "error",
+      message: "Rate and rate type are required",
+    });
+  }
+  OvertimeRate.update(
+    { Overtime_Rate: Overtime_Rate },
+    { where: { Rate_Name: Rate_Name } }
+  )
+    .then(() => {
+      res.status(200).json({
+        status: "success",
+        message: "Overtime rate updated successfully",
+      });
+    })
+    .catch((err) => {
+      console.error("Error updating overtime rates:", err);
+      res.status(500).json({
+        status: "error",
+        message: "Failed to update overtime rates",
+      });
+    });
+}

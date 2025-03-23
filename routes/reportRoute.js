@@ -40,4 +40,7 @@ const router = express.Router();
  */
 router.get("/dashboard-stat", authenticateJWT, reportController.reportStat);
 
+router.get("/rates", authenticateJWT, reportController.fetchRates);
+router.put("/rates", authenticateJWT, reportController.updateRates);
+
 module.exports = router;
